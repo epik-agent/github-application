@@ -1,0 +1,17 @@
+{
+  "name": "epik-bot",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@octokit/app": "^15.0.0",
+    "@octokit/webhooks": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0",
+    "vercel": "^39.0.0"
+  }
+}
