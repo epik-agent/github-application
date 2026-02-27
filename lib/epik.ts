@@ -1,4 +1,4 @@
-import { App } from "@octokit/app";
+import { App } from '@octokit/app';
 
 /**
  * Singleton GitHub App instance, shared across invocations within the same
@@ -20,15 +20,13 @@ export function getApp(): App {
   const webhookSecret = process.env.WEBHOOK_SECRET;
 
   if (!appId || !privateKey || !webhookSecret) {
-    throw new Error(
-      "Missing environment variables: APP_ID, PRIVATE_KEY, WEBHOOK_SECRET"
-    );
+    throw new Error('Missing environment variables: APP_ID, PRIVATE_KEY, WEBHOOK_SECRET');
   }
 
   _app = new App({
     appId,
     // Vercel env vars encode newlines as literal "\n" — restore them
-    privateKey: privateKey.replace(/\\n/g, "\n"),
+    privateKey: privateKey.replace(/\\n/g, '\n'),
     webhooks: { secret: webhookSecret },
   });
 

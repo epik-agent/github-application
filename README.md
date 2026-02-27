@@ -14,12 +14,12 @@ lib/handlers.ts  — Webhook event handlers. Add new behavior here.
 
 Go to https://github.com/settings/apps → **New GitHub App**.
 
-| Field | Value |
-|---|---|
-| Name | Epik |
-| Homepage URL | https://github.com/epik-agent |
-| Webhook URL | `https://YOUR-APP.vercel.app/api/webhook` (update after first deploy) |
-| Webhook secret | Make one up, save it |
+| Field          | Value                                                                 |
+| -------------- | --------------------------------------------------------------------- |
+| Name           | Epik                                                                  |
+| Homepage URL   | https://github.com/epik-agent                                         |
+| Webhook URL    | `https://YOUR-APP.vercel.app/api/webhook` (update after first deploy) |
+| Webhook secret | Make one up, save it                                                  |
 
 **Permissions (Repository):**
 
@@ -56,11 +56,11 @@ Go back to your GitHub App settings and update the Webhook URL to
 
 In the Vercel dashboard → Settings → Environment Variables, add:
 
-| Variable | Value |
-|---|---|
-| `APP_ID` | Your GitHub App ID |
-| `PRIVATE_KEY` | Contents of the `.pem` file (paste it all, newlines become `\n`) |
-| `WEBHOOK_SECRET` | The secret from step 1 |
+| Variable         | Value                                                            |
+| ---------------- | ---------------------------------------------------------------- |
+| `APP_ID`         | Your GitHub App ID                                               |
+| `PRIVATE_KEY`    | Contents of the `.pem` file (paste it all, newlines become `\n`) |
+| `WEBHOOK_SECRET` | The secret from step 1                                           |
 
 Redeploy after setting these.
 
