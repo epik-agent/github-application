@@ -1,2 +1,1 @@
-# github-application
-GitHub Application
+# GitHub Application
