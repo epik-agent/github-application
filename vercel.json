@@ -1,0 +1,18 @@
+{
+  "framework": null,
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/health",
+      "dest": "/api/health.ts"
+    },
+    {
+      "src": "/api/webhook",
+      "dest": "/api/webhook.ts"
+    }
+  ]
+}
