@@ -1,24 +1,7 @@
 import type { App } from '@octokit/app';
-import type { Octokit } from '@octokit/core';
 import { parseMentionCommand } from './mention-parser.js';
 import { handleMentionCommand } from './command-responses.js';
 import { rateLimiter } from './rate-limiter.js';
-
-type RestOctokit = Octokit & {
-  rest: {
-    issues: {
-      createComment: (params: {
-        owner: string;
-        repo: string;
-        issue_number: number;
-        body: string;
-      }) => Promise<unknown>;
-      get: (params: { owner: string; repo: string; issue_number: number }) => Promise<{
-        data: { state: string; title: string; pull_request?: unknown };
-      }>;
-    };
-  };
-};
 
 /**
  * Register all webhook event handlers on the app.
@@ -60,7 +43,7 @@ export function registerHandlers(app: App): void {
     await handleMentionCommand(
       command,
       { owner: repo.owner.login, repo: repo.name, issueNumber: issue.number },
-      octokit as unknown as RestOctokit,
+      octokit,
     );
   });
 

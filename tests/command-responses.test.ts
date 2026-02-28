@@ -3,28 +3,17 @@ import { handleMentionCommand } from '../lib/command-responses.js';
 import type { MentionCommand } from '../lib/mention-parser.js';
 
 interface MockOctokit {
-  rest: {
-    issues: {
-      createComment: ReturnType<typeof vi.fn>;
-      get: ReturnType<typeof vi.fn>;
-    };
-  };
+  request: ReturnType<typeof vi.fn>;
 }
 
 function makeMockOctokit(issueState = 'open'): MockOctokit {
   return {
-    rest: {
-      issues: {
-        createComment: vi.fn().mockResolvedValue({}),
-        get: vi.fn().mockResolvedValue({
-          data: {
-            state: issueState,
-            pull_request: undefined,
-            title: 'Test issue',
-          },
-        }),
-      },
-    },
+    request: vi.fn().mockImplementation((route: string) => {
+      if (route.startsWith('GET')) {
+        return Promise.resolve({ data: { state: issueState, title: 'Test issue' } });
+      }
+      return Promise.resolve({});
+    }),
   };
 }
 
@@ -41,8 +30,8 @@ describe('handleMentionCommand — status (repo-wide)', () => {
     const command: MentionCommand = { type: 'status', issueNumber: null };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
+    expect(octokit.request).toHaveBeenCalledOnce();
+    const body = (octokit.request.mock.calls[0] as [string, { body: string }])[1].body;
     expect(body).toMatch(/no active builds|build status/i);
   });
 });
@@ -53,9 +42,12 @@ describe('handleMentionCommand — status #N', () => {
     const command: MentionCommand = { type: 'status', issueNumber: 42 };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
-    expect(body).toContain('42');
+    // Two calls: GET issue + POST comment
+    expect(octokit.request).toHaveBeenCalledTimes(2);
+    const postCall = octokit.request.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
+    ) as [string, { body: string }] | undefined;
+    expect(postCall?.[1].body).toContain('42');
   });
 
   it('mentions "open" when issue is open', async () => {
@@ -63,8 +55,10 @@ describe('handleMentionCommand — status #N', () => {
     const command: MentionCommand = { type: 'status', issueNumber: 5 };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
-    expect(body).toMatch(/open|todo|in progress/i);
+    const postCall = octokit.request.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
+    ) as [string, { body: string }] | undefined;
+    expect(postCall?.[1].body).toMatch(/open|todo|in progress/i);
   });
 
   it('mentions "closed" or "done" when issue is closed', async () => {
@@ -72,8 +66,10 @@ describe('handleMentionCommand — status #N', () => {
     const command: MentionCommand = { type: 'status', issueNumber: 7 };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
-    expect(body).toMatch(/closed|done|merged/i);
+    const postCall = octokit.request.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
+    ) as [string, { body: string }] | undefined;
+    expect(postCall?.[1].body).toMatch(/closed|done|merged/i);
   });
 });
 
@@ -83,8 +79,8 @@ describe('handleMentionCommand — help', () => {
     const command: MentionCommand = { type: 'help' };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
+    expect(octokit.request).toHaveBeenCalledOnce();
+    const body = (octokit.request.mock.calls[0] as [string, { body: string }])[1].body;
     expect(body).toContain('status');
     expect(body).toContain('help');
   });
@@ -96,9 +92,8 @@ describe('handleMentionCommand — unknown', () => {
     const command: MentionCommand = { type: 'unknown', raw: 'foobar' };
     await handleMentionCommand(command, baseParams, octokit as never);
 
-    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
-    const body = (octokit.rest.issues.createComment.mock.calls[0] as [{ body: string }])[0].body;
-    // Should include the unknown command and list of valid commands
+    expect(octokit.request).toHaveBeenCalledOnce();
+    const body = (octokit.request.mock.calls[0] as [string, { body: string }])[1].body;
     expect(body).toContain('foobar');
     expect(body).toContain('status');
   });
