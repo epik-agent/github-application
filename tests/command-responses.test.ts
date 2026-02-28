@@ -45,7 +45,7 @@ describe('handleMentionCommand — status #N', () => {
     // Two calls: GET issue + POST comment
     expect(octokit.request).toHaveBeenCalledTimes(2);
     const postCall = octokit.request.mock.calls.find(
-      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).startsWith('POST'),
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
     ) as [string, { body: string }] | undefined;
     expect(postCall?.[1].body).toContain('42');
   });
@@ -56,7 +56,7 @@ describe('handleMentionCommand — status #N', () => {
     await handleMentionCommand(command, baseParams, octokit as never);
 
     const postCall = octokit.request.mock.calls.find(
-      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).startsWith('POST'),
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
     ) as [string, { body: string }] | undefined;
     expect(postCall?.[1].body).toMatch(/open|todo|in progress/i);
   });
@@ -67,7 +67,7 @@ describe('handleMentionCommand — status #N', () => {
     await handleMentionCommand(command, baseParams, octokit as never);
 
     const postCall = octokit.request.mock.calls.find(
-      (c: unknown[]) => typeof c[0] === 'string' && (c[0] as string).startsWith('POST'),
+      (c: unknown[]) => typeof c[0] === 'string' && c[0].startsWith('POST'),
     ) as [string, { body: string }] | undefined;
     expect(postCall?.[1].body).toMatch(/closed|done|merged/i);
   });
