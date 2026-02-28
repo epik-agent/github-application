@@ -1,17 +1,3 @@
 {
-  "framework": null,
-  "routes": [
-    {
-      "src": "/api/health",
-      "dest": "/api/health.ts"
-    },
-    {
-      "src": "/api/webhook",
-      "dest": "/api/webhook.ts"
-    },
-    {
-      "src": "/api/build-event",
-      "dest": "/api/build-event.ts"
-    }
-  ]
+  "framework": null
 }
