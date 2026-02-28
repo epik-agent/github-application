@@ -47,6 +47,16 @@ export function registerHandlers(app: App): void {
     // Future: planning agent picks this up
   });
 
+  app.webhooks.on('pull_request', ({ payload }) => {
+    const pr = payload.pull_request;
+    const repo = payload.repository;
+
+    // eslint-disable-next-line no-console
+    console.log(`[epik] PR event in ${repo.full_name}#${String(pr.number)}: "${pr.title}"`);
+
+    // Future: CI liaison, build status updates
+  });
+
   app.webhooks.onError((error) => {
     // eslint-disable-next-line no-console
     console.error('[epik] Webhook error:', error.message);

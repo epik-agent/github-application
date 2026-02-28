@@ -9,5 +9,5 @@
     "rootDir": ".",
     "skipLibCheck": true
   },
-  "include": ["api/**/*.ts", "lib/**/*.ts"]
+  "include": ["api/**/*.ts", "lib/**/*.ts", "tests/**/*.ts"]
 }

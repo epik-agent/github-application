@@ -1,0 +1,17 @@
+name: Setup Node.js and dependencies
+description: |
+  Installs Node.js (LTS) and npm dependencies with caching.
+  Reusable across epik-agent repos for consistent CI environments.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
