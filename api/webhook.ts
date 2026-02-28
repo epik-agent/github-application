@@ -11,22 +11,10 @@ import { validateWebhookRequest } from '../lib/validate-request.js';
  * serverless function automatically via the api/ directory convention.
  */
 
-let app: ReturnType<typeof getApp>;
-let initError: Error | null = null;
-try {
-  app = getApp();
-  registerHandlers(app);
-} catch (e: unknown) {
-  initError = e instanceof Error ? e : new Error(String(e));
-  // eslint-disable-next-line no-console
-  console.error('[epik] Failed to initialise app:', initError.message);
-}
+const app = getApp();
+registerHandlers(app);
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (initError ?? !app) {
-    res.status(500).json({ error: 'App init failed', detail: initError?.message });
-    return;
-  }
   const validationError = validateWebhookRequest(
     req.method ?? '',
     req.headers as Record<string, string | string[] | undefined>,
