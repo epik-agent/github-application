@@ -31,7 +31,7 @@ export interface UnknownCommand {
  *
  * Group 1 = command word and everything after it
  */
-const MENTION_COMMAND_RE = /^\s*@epik(?:\[bot\])?\s+(\S.*)/i;
+const MENTION_COMMAND_RE = /^\s*@epik(?:-agent)?(?:\[bot\])?\s+(\S.*)/i;
 
 /**
  * Parses a comment body and returns the recognised command, or null if the
