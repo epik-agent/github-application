@@ -59,24 +59,44 @@ function getHandler(handlers: Record<string, HandlerFn[]>, event: string): Handl
   return list[0];
 }
 
+/** Standard octokit mock with createComment and issues.get stubs. */
+function makeOctokit(): {
+  rest: {
+    issues: {
+      createComment: ReturnType<typeof vi.fn>;
+      get: ReturnType<typeof vi.fn>;
+    };
+  };
+} {
+  return {
+    rest: {
+      issues: {
+        createComment: vi.fn().mockResolvedValue({}),
+        get: vi.fn().mockResolvedValue({
+          data: { state: 'open', title: 'Test issue', pull_request: undefined },
+        }),
+      },
+    },
+  };
+}
+
 describe('registerHandlers', () => {
   describe('issue_comment.created', () => {
-    it('replies when @epik is mentioned', async () => {
+    it('replies to a recognized command (@epik help)', async () => {
       const { app, handlers } = makeAppMock();
       registerHandlers(app);
 
-      const createComment = vi.fn().mockResolvedValue({});
+      const octokit = makeOctokit();
       const payload: MockIssueCommentPayload = {
-        comment: { body: 'Hey @epik, what can you do?', performed_via_github_app: null },
+        comment: { body: '@epik help', performed_via_github_app: null },
         issue: { number: 42 },
         repository: { full_name: 'epik-agent/test', owner: { login: 'epik-agent' }, name: 'test' },
       };
 
-      const octokit = { rest: { issues: { createComment } } };
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(createComment).toHaveBeenCalledOnce();
-      expect(createComment).toHaveBeenCalledWith(
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
+      expect(octokit.rest.issues.createComment).toHaveBeenCalledWith(
         expect.objectContaining({
           owner: 'epik-agent',
           repo: 'test',
@@ -85,21 +105,36 @@ describe('registerHandlers', () => {
       );
     });
 
-    it('ignores comments that do not mention @epik', async () => {
+    it('ignores conversational mentions (no command)', async () => {
       const { app, handlers } = makeAppMock();
       registerHandlers(app);
 
-      const createComment = vi.fn();
+      const octokit = makeOctokit();
+      const payload: MockIssueCommentPayload = {
+        comment: { body: 'thanks @epik[bot]!', performed_via_github_app: null },
+        issue: { number: 10 },
+        repository: { full_name: 'epik-agent/test', owner: { login: 'epik-agent' }, name: 'test' },
+      };
+
+      await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
+
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+    });
+
+    it('ignores comments that do not mention @epik at all', async () => {
+      const { app, handlers } = makeAppMock();
+      registerHandlers(app);
+
+      const octokit = makeOctokit();
       const payload: MockIssueCommentPayload = {
         comment: { body: 'Great issue!', performed_via_github_app: null },
         issue: { number: 10 },
         repository: { full_name: 'epik-agent/test', owner: { login: 'epik-agent' }, name: 'test' },
       };
 
-      const octokit = { rest: { issues: { createComment } } };
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(createComment).not.toHaveBeenCalled();
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
     });
 
     it('ignores its own comments (app self-reply guard)', async () => {
@@ -107,20 +142,19 @@ describe('registerHandlers', () => {
       const { app, handlers } = makeAppMock();
       registerHandlers(app);
 
-      const createComment = vi.fn();
+      const octokit = makeOctokit();
       const payload: MockIssueCommentPayload = {
         comment: {
-          body: '@epik hello',
+          body: '@epik help',
           performed_via_github_app: { id: 999 },
         },
         issue: { number: 7 },
         repository: { full_name: 'epik-agent/test', owner: { login: 'epik-agent' }, name: 'test' },
       };
 
-      const octokit = { rest: { issues: { createComment } } };
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(createComment).not.toHaveBeenCalled();
+      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
       delete process.env.APP_ID;
     });
   });
@@ -162,25 +196,24 @@ describe('registerHandlers', () => {
   });
 });
 
-describe('registerHandlers — @epik mention is case-insensitive', () => {
+describe('registerHandlers — command routing is case-insensitive', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it('responds to @EPIK (uppercase) mention', async () => {
+  it('responds to @EPIK STATUS (uppercase command)', async () => {
     const { app, handlers } = makeAppMock();
     registerHandlers(app);
 
-    const createComment = vi.fn().mockResolvedValue({});
+    const octokit = makeOctokit();
     const payload: MockIssueCommentPayload = {
-      comment: { body: '@EPIK status please', performed_via_github_app: null },
+      comment: { body: '@EPIK STATUS', performed_via_github_app: null },
       issue: { number: 3 },
       repository: { full_name: 'epik-agent/test', owner: { login: 'epik-agent' }, name: 'test' },
     };
 
-    const octokit = { rest: { issues: { createComment } } };
     await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-    expect(createComment).toHaveBeenCalledOnce();
+    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
   });
 });

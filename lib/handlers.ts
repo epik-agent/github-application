@@ -1,4 +1,24 @@
 import type { App } from '@octokit/app';
+import type { Octokit } from '@octokit/core';
+import { parseMentionCommand } from './mention-parser.js';
+import { handleMentionCommand } from './command-responses.js';
+import { rateLimiter } from './rate-limiter.js';
+
+type RestOctokit = Octokit & {
+  rest: {
+    issues: {
+      createComment: (params: {
+        owner: string;
+        repo: string;
+        issue_number: number;
+        body: string;
+      }) => Promise<unknown>;
+      get: (params: { owner: string; repo: string; issue_number: number }) => Promise<{
+        data: { state: string; title: string; pull_request?: unknown };
+      }>;
+    };
+  };
+};
 
 /**
  * Register all webhook event handlers on the app.
@@ -17,24 +37,31 @@ export function registerHandlers(app: App): void {
     const appId = process.env.APP_ID;
     if (comment.performed_via_github_app?.id === Number(appId)) return;
 
+    // Rate-limit: one response per issue per 30 seconds
+    const rateLimitKey = `${repo.full_name}#${String(issue.number)}`;
+    if (!rateLimiter.isAllowed(rateLimitKey)) {
+      // eslint-disable-next-line no-console
+      console.log(`[epik] Rate-limited response for ${rateLimitKey}`);
+      return;
+    }
+
     // eslint-disable-next-line no-console
     console.log(
       `[epik] Mentioned in ${repo.full_name}#${String(issue.number)}: "${comment.body.slice(0, 80)}"`,
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    await (octokit as any).rest.issues.createComment({
-      owner: repo.owner.login,
-      repo: repo.name,
-      issue_number: issue.number,
-      body: [
-        `👋 I'm here. You said:`,
-        ``,
-        `> ${comment.body.slice(0, 200)}`,
-        ``,
-        `I'm not smart yet, but I'm listening.`,
-      ].join('\n'),
-    });
+    const command = parseMentionCommand(comment.body);
+
+    if (command === null) {
+      // Conversational mention — no command detected, do not respond
+      return;
+    }
+
+    await handleMentionCommand(
+      command,
+      { owner: repo.owner.login, repo: repo.name, issueNumber: issue.number },
+      octokit as unknown as RestOctokit,
+    );
   });
 
   app.webhooks.on('issues.opened', ({ payload }) => {
