@@ -76,5 +76,20 @@ describe('parseMentionCommand', () => {
       const result = parseMentionCommand('@epik status');
       expect(result).toEqual({ type: 'status', issueNumber: null });
     });
+
+    it('parses @epik-agent help', () => {
+      const result = parseMentionCommand('@epik-agent help');
+      expect(result).toEqual({ type: 'help' });
+    });
+
+    it('parses @epik-agent[bot] help', () => {
+      const result = parseMentionCommand('@epik-agent[bot] help');
+      expect(result).toEqual({ type: 'help' });
+    });
+
+    it('parses @epik-agent status', () => {
+      const result = parseMentionCommand('@epik-agent status #5');
+      expect(result).toEqual({ type: 'status', issueNumber: 5 });
+    });
   });
 });
