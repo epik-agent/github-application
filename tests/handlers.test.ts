@@ -59,24 +59,15 @@ function getHandler(handlers: Record<string, HandlerFn[]>, event: string): Handl
   return list[0];
 }
 
-/** Standard octokit mock with createComment and issues.get stubs. */
-function makeOctokit(): {
-  rest: {
-    issues: {
-      createComment: ReturnType<typeof vi.fn>;
-      get: ReturnType<typeof vi.fn>;
-    };
-  };
-} {
+/** Standard octokit mock with request stub. */
+function makeOctokit(): { request: ReturnType<typeof vi.fn> } {
   return {
-    rest: {
-      issues: {
-        createComment: vi.fn().mockResolvedValue({}),
-        get: vi.fn().mockResolvedValue({
-          data: { state: 'open', title: 'Test issue', pull_request: undefined },
-        }),
-      },
-    },
+    request: vi.fn().mockImplementation((route: string) => {
+      if (route.startsWith('GET')) {
+        return Promise.resolve({ data: { state: 'open', title: 'Test issue' } });
+      }
+      return Promise.resolve({});
+    }),
   };
 }
 
@@ -95,8 +86,9 @@ describe('registerHandlers', () => {
 
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
-      expect(octokit.rest.issues.createComment).toHaveBeenCalledWith(
+      expect(octokit.request).toHaveBeenCalledOnce();
+      expect(octokit.request).toHaveBeenCalledWith(
+        'POST /repos/{owner}/{repo}/issues/{issue_number}/comments',
         expect.objectContaining({
           owner: 'epik-agent',
           repo: 'test',
@@ -118,7 +110,7 @@ describe('registerHandlers', () => {
 
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+      expect(octokit.request).not.toHaveBeenCalled();
     });
 
     it('ignores comments that do not mention @epik at all', async () => {
@@ -134,7 +126,7 @@ describe('registerHandlers', () => {
 
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+      expect(octokit.request).not.toHaveBeenCalled();
     });
 
     it('ignores its own comments (app self-reply guard)', async () => {
@@ -154,7 +146,7 @@ describe('registerHandlers', () => {
 
       await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-      expect(octokit.rest.issues.createComment).not.toHaveBeenCalled();
+      expect(octokit.request).not.toHaveBeenCalled();
       delete process.env.APP_ID;
     });
   });
@@ -214,6 +206,6 @@ describe('registerHandlers — command routing is case-insensitive', () => {
 
     await getHandler(handlers, 'issue_comment.created')({ octokit, payload });
 
-    expect(octokit.rest.issues.createComment).toHaveBeenCalledOnce();
+    expect(octokit.request).toHaveBeenCalledOnce();
   });
 });

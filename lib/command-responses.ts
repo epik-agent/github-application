@@ -7,32 +7,12 @@ interface CommandContext {
   readonly issueNumber: number;
 }
 
-type RestOctokit = Octokit & {
-  rest: {
-    issues: {
-      createComment: (params: {
-        owner: string;
-        repo: string;
-        issue_number: number;
-        body: string;
-      }) => Promise<unknown>;
-      get: (params: { owner: string; repo: string; issue_number: number }) => Promise<{
-        data: {
-          state: string;
-          title: string;
-          pull_request?: unknown;
-        };
-      }>;
-    };
-  };
-};
-
 const HELP_TEXT = [
-  `**@epik[bot] commands:**`,
+  `**@epik-agent commands:**`,
   ``,
-  `- \`@epik[bot] status\` — show build status for this repo`,
-  `- \`@epik[bot] status #N\` — show status of a specific issue`,
-  `- \`@epik[bot] help\` — show this message`,
+  `- \`@epik-agent status\` — show build status for this repo`,
+  `- \`@epik-agent status #N\` — show status of a specific issue`,
+  `- \`@epik-agent help\` — show this message`,
 ].join('\n');
 
 /**
@@ -42,7 +22,7 @@ const HELP_TEXT = [
 export async function handleMentionCommand(
   command: MentionCommand,
   ctx: CommandContext,
-  octokit: RestOctokit,
+  octokit: Octokit,
 ): Promise<void> {
   switch (command.type) {
     case 'status': {
@@ -51,7 +31,7 @@ export async function handleMentionCommand(
           ? repoStatusBody()
           : await issueStatusBody(command.issueNumber, ctx, octokit);
 
-      await octokit.rest.issues.createComment({
+      await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
@@ -61,7 +41,7 @@ export async function handleMentionCommand(
     }
 
     case 'help': {
-      await octokit.rest.issues.createComment({
+      await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
@@ -71,7 +51,7 @@ export async function handleMentionCommand(
     }
 
     case 'unknown': {
-      await octokit.rest.issues.createComment({
+      await octokit.request('POST /repos/{owner}/{repo}/issues/{issue_number}/comments', {
         owner: ctx.owner,
         repo: ctx.repo,
         issue_number: ctx.issueNumber,
@@ -83,8 +63,6 @@ export async function handleMentionCommand(
 }
 
 function repoStatusBody(): string {
-  // Without a persistent store, we can only report that no active builds are
-  // tracked in this serverless instance. A future version will query a store.
   return [
     `**Build status** — no active builds tracked in this instance.`,
     ``,
@@ -96,14 +74,15 @@ function repoStatusBody(): string {
 async function issueStatusBody(
   targetIssueNumber: number,
   ctx: CommandContext,
-  octokit: RestOctokit,
+  octokit: Octokit,
 ): Promise<string> {
-  const { data: issue } = await octokit.rest.issues.get({
+  const { data } = await octokit.request('GET /repos/{owner}/{repo}/issues/{issue_number}', {
     owner: ctx.owner,
     repo: ctx.repo,
     issue_number: targetIssueNumber,
   });
 
+  const issue = data as { state: string; title: string };
   const stateLabel = issue.state === 'closed' ? '✅ closed / done' : '🔵 open';
 
   return [
